@@ -1,0 +1,146 @@
+{
+  "highLevelProjectOverview": {
+    "concept": "A deep, strategic management and simulation game where players build, manage, and defend a criminal empire. The game is presented as a frontend dashboard, providing a top-down, data-driven view of the player's operations.",
+    "themeAndAesthetics": {
+      "base": "A gritty, atmospheric \"Noir-Steampunk\" blend set in a stylized 1920s-1940s industrial urban landscape. The UI should be clean, intuitive, and thematically integrated, resembling old paper documents, industrial schematics, or vintage switchboards.",
+      "fonts": "'Cinzel Decorative' for titles, 'Roboto' for body text.",
+      "colorPalette": "A dark mode theme using blacks and dark grays as a base, with accents of yellow, gold, cyan, and red for key information."
+    },
+    "coreTechnologies": {
+      "frontendFramework": "React 19+ with TypeScript.",
+      "styling": "Tailwind CSS (via CDN).",
+      "mapGeneration": "D3-Delaunay and D3-Polygon for Voronoi diagrams and shape calculations, executed in Web Workers for performance.",
+      "generativeAI": "Google Gemini API (`@google/genai`) for dynamic content generation."
+    }
+  },
+  "projectArchitecture": {
+    "description": "The project is a self-contained, client-side application. The architecture must strictly separate AI content generation from local, rule-based game simulation.",
+    "fileStructure": [
+      "/",
+      "|-- components/",
+      "|   |-- AssignCrewModal.tsx",
+      "|   |-- Button.tsx",
+      "|   |-- DistrictDetailModal.tsx",
+      "|   |-- EconomicClimateDisplay.tsx",
+      "|   |-- EventLogModal.tsx",
+      "|   |-- FinanceView.tsx",
+      "|   |-- GangView.tsx",
+      "|   |-- Header.tsx",
+      "|   |-- HomeScreen.tsx",
+      "|   |-- HqView.tsx",
+      "|   |-- icons.tsx",
+      "|   |-- LieutenantsView.tsx",
+      "|   |-- MapView.tsx",
+      "|   |-- MusclesView.tsx",
+      "|   |-- NotificationLog.tsx",
+      "|   |-- OperationsView.tsx",
+      "|   |-- RecruitmentView.tsx",
+      "|   |-- SimpleLineChart.tsx",
+      "|   |-- SkeletonView.tsx",
+      "|   |-- TokenCountDisplay.tsx",
+      "|   |-- WorldEventsDisplay.tsx",
+      "|-- services/",
+      "|   |-- gemini/",
+      "|   |   |-- index.ts",
+      "|   |   |-- imageGenerator.ts",
+      "|   |   |-- operationGenerator.ts",
+      "|   |   |-- scenarioGenerator.ts",
+      "|   |-- localAutomations/",
+      "|   |   |-- index.ts",
+      "|   |   |-- automationService.ts",
+      "|   |   |-- musclesGenerationService.ts",
+      "|   |   |-- muscles.worker.ts",
+      "|   |   |-- rewardService.ts",
+      "|   |   |-- rivalFactionService.ts",
+      "|   |   |-- skeletonGenerationService.ts",
+      "|   |   |-- skeleton.worker.ts",
+      "|-- App.tsx",
+      "|-- constants.ts",
+      "|-- index.html",
+      "|-- index.tsx",
+      "|-- metadata.json",
+      "|-- types.ts",
+      "|-- MapEditorApp.tsx",
+      "|-- MASTERPROMPT.json",
+      "|-- MASTERPROMPT.md",
+      "|-- README.md",
+      "|-- CONTRIBUTING_GUIDELINES.md",
+      "|-- FUTURE_FEATURES.md",
+      "|-- CHANGELOG.md"
+    ]
+  },
+  "coreGenerativePrompts": {
+    "description": "These are the heart of the game's dynamic content. The following prompts must be implemented exactly as specified within their respective service files.",
+    "scenarioGenerator": {
+      "filePath": "services/gemini/scenarioGenerator.ts",
+      "promptName": "The 'Genesis' Prompt",
+      "description": "This single, comprehensive prompt generates the entire world state at the beginning of a new game based on detailed player settings.",
+      "input": "Takes a ScenarioOptions object from the HomeScreen component, which includes gameMode, narrativeTemplate, difficulty, number of districts/factions, and sliders for economic volatility, rival aggression, etc.",
+      "output": "A single JSON object matching the FullInitialScenario type, containing the entire world state: narrative, city map with wards and districts, rival factions with AI profiles, recruitment pools, lieutenants, economic climate, and starting conditions."
+    },
+    "operationGenerator": {
+      "filePath": "services/gemini/operationGenerator.ts",
+      "promptName": "Mid-Game Operations Prompt",
+      "description": "This prompt is used during gameplay to generate new missions for the player.",
+      "input": "Takes the entire current GameState object to provide rich context about the player's empire tier, finances, heat, controlled territory, and crew strength.",
+      "output": "An array of 3 unique Operation objects, with themes, difficulty, and rewards scaled appropriately to the player's current tier and status."
+    },
+    "imageGenerator": {
+        "filePath": "services/gemini/imageGenerator.ts",
+        "promptName": "Map Background Generator",
+        "description": "Generates a thematic background image for the city map.",
+        "input": "A static, detailed text prompt describing a 'gritty, top-down, noir-steampunk city map blueprint.'",
+        "output": "A single base64-encoded PNG image string to be used as an SVG background."
+    }
+  },
+  "gameLogicAndSimulation": {
+    "description": "Implemented in the `services/localAutomations/` directory. The main game loop in `App.tsx` calls these services on each \"tick\" (every 2 seconds, advancing game time by 1 hour).",
+    "mainGameLoop": {
+      "filePath": "App.tsx",
+      "logic": "A `useEffect` hook runs on a 2-second interval. It updates the `worldTime` and calls a master state update function that executes the following logic in order: 1. Process Automation (income, heat, assignments), 2. Process Rival Turns (once per day), 3. Check for completed Player Operations, 4. Process District Defense effects, 5. Check for completed Rival Operations, 6. Manage and spawn Map Activities, 7. Check for RICO Raid, 8. Update cash flow/heat trend, 9. Check for Narrative Progression."
+    },
+    "automationService": {
+      "filePath": "services/localAutomations/automationService.ts",
+      "logic": "Calculates all passive, hourly changes. Handles income from districts/upgrades, heat decay, police investigation progress, crew member healing and training, influence generation in neutral districts, and applies effects from active world events and Ward Control Bonuses."
+    },
+    "rivalFactionService": {
+      "filePath": "services/localAutomations/rivalFactionService.ts",
+      "logic": "Simulates a rival faction's turn (run once per day per faction). Factions can only target neutral or player districts adjacent to their own territory. They make strategic decisions based on their `aiProfile`. Includes a 'catch-up' economic stimulus for factions that fall too far behind the player."
+    },
+    "rewardService": {
+      "filePath": "services/localAutomations/rewardService.ts",
+      "logic": "Generates a random, thematic reward when the player successfully defends against a rival attack. Rewards can include cash, skill points, influence boosts, traits, or a rival defector joining the crew."
+    },
+    "mapGenerators": {
+      "description": "A high-performance, two-phase procedural world generation engine that runs in Web Workers to create realistic, organic world maps.",
+      "skeleton": {
+        "filePath": "services/localAutomations/skeleton.worker.ts",
+        "logic": "Generates a non-uniform point cloud using Perlin noise for density. Computes the Delaunay triangulation and Voronoi diagram for this cloud, forming the geometric 'scaffolding' of the world. Identifies border cells to create natural coastlines."
+      },
+      "muscles": {
+        "filePath": "services/localAutomations/muscles.worker.ts",
+        "logic": "Takes the skeleton data and performs several steps: 1. Carves a unique landmass by treating border/low-elevation cells as 'water'. 2. Uses K-Means clustering on land cells to form Districts, then clusters Districts into Wards. 3. Stitches the final SVG path geometry for all territories. 4. Enriches the map with strategic layers like supply lines and points of interest."
+      }
+    }
+  },
+  "componentAndUiUxDesign": {
+    "description": "The application's UI is built with functional React components and styled with Tailwind CSS.",
+    "components": [
+      { "name": "HomeScreen.tsx", "description": "The entry point. Features a sophisticated, multi-panel UI for game setup. Now includes a button to launch the 'Map Editor' for visualizing the new world generation engine." },
+      { "name": "MapEditorApp.tsx", "description": "A new standalone application for developing and visualizing the procedural map generation. It allows triggering the 'Skeleton' and 'Muscles' phases independently, viewing the output, and animating the K-Means clustering process. Includes controls for toggling layers and managing map seeds." },
+      { "name": "App.tsx", "description": "The main application container. Manages all game state, runs the game loop, and handles view switching. Responsible for calling the map and background generators upon game initialization." },
+      { "name": "Header.tsx", "description": "Displays critical stats: Cash, Heat, World Time, Tier Progress, and Investigation Progress. Includes trend indicators for cash flow and heat changes. Contains a button to open the `EventLogModal`." },
+      { "name": "MapView.tsx", "description": "The primary strategic interface. Renders a large, interactive SVG map housed in a thematic 'diegetic frame'. The frame contains functional gauges for global heat and investigation progress. The map displays procedurally generated Wards and Districts as SVG paths. District paths are color-coded by faction. Hovering highlights districts, their parent ward, and connection lines to adjacent districts. Displays visual indicators for rival attacks, player influence, and clickable map activities." },
+      { "name": "GangView.tsx", "description": "A grid of all player crew members. Each card shows the member's name, role, status, loyalty, skills, and traits. Allows sorting by multiple criteria. Provides an interface for assigning idle members to tasks (districts, HQ upgrades, training)." },
+      { "name": "OperationsView.tsx", "description": "A tabbed view for \"Available\" and \"Active\" operations. Available ops can be started, which opens the `AssignCrewModal`. Active ops show a progress bar and assigned crew. Includes a button to generate new operations via the Gemini API." },
+      { "name": "HqView.tsx", "description": "A list of purchasable headquarters upgrades. Shows cost, effects, and owned status. Allows players to purchase upgrades and assign specialists to unlocked slots. Includes an \"HQ Actions\" section for the \"Bribe the Cops\" action, which has a cooldown." },
+      { "name": "LieutenantsView.tsx", "description": "Displays the legendary recruits generated at the start of the game. Shows their unique abilities and backstory. Players can pay a high cost to \"Pursue\" them, which creates a special, high-difficulty operation on the Operations board." },
+      { "name": "RecruitmentView.tsx", "description": "Shows player-controlled districts. Players can initiate a \"Scout for Talent\" operation. This reveals a selection of recruits from that district's hidden pool based on the assigned scout's influence skill. Revealed recruits are displayed as cards and can be hired for a fee." },
+      { "name": "FinanceView.tsx", "description": "A new top-level screen for financial management. Displays a ledger of recent transactions, aggregated income/expense reports for the last 24 hours, and a historical line chart of cash balance over the last 7 game days." },
+      { "name": "EventLogModal.tsx", "description": "A modal that displays a persistent, scrollable log of all major game events and notifications, providing a historical record for the player." },
+      { "name": "AssignCrewModal.tsx", "description": "A modal for assigning crew to an operation. Players select idle members. The UI dynamically calculates and displays the \"Success Probability\" and modified reward/duration based on the selected crew's relevant skills vs. the operation's difficulty." },
+      { "name": "DistrictDetailModal.tsx", "description": "A modal showing detailed stats for a selected district. Shows contextual actions, such as \"Initiate Takeover\" for uncontrolled districts or \"Launch Defense\" for player districts under attack. Displays progress of ongoing rival attacks." },
+      { "name": "NotificationLog.tsx", "description": "A component that displays temporary, pop-up style notifications for key game events. Notifications auto-dismiss after 5 seconds and include a 'Clear All' button." }
+    ]
+  }
+}
